@@ -63,80 +63,80 @@ const isMobile = window.matchMedia('(max-width: 640px)').matches;
   document.querySelector('.hero-count')?.remove();
   document.querySelector('.glass-card')?.remove();
 
-  // On mobile: use a single lightweight hero video instead of 3 heavy panels
-  if (isMobile) {
-    const singleVideo = document.createElement('video');
-    singleVideo.className = 'hero-panel-video';
-    singleVideo.autoplay = true;
-    singleVideo.muted = true;
-    singleVideo.defaultMuted = true;
-    singleVideo.loop = true;
-    singleVideo.playsInline = true;
-    singleVideo.setAttribute('playsinline', '');
-    singleVideo.setAttribute('webkit-playsinline', '');
-    singleVideo.setAttribute('muted', '');
-    singleVideo.preload = 'metadata';
-    singleVideo.style.cssText = 'width:100%;height:100%;object-fit:cover;grid-column:1/-1;';
+  const panels = ['01', '02', '03'];
+  const videos = [];
+  let readyCount = 0;
+  let started = false;
 
-    const src = document.createElement('source');
-    src.src = 'public/videos/pouffee-final-04.mp4';
-    src.type = 'video/mp4';
-    singleVideo.appendChild(src);
-
-    // Override triptych grid for single panel
-    heroAsset.style.gridTemplateColumns = '1fr';
-
-    function tryPlay() {
-      singleVideo.muted = true;
-      singleVideo.play().catch(() => {});
-    }
-    singleVideo.addEventListener('canplay', tryPlay, { once: true });
-    singleVideo.addEventListener('loadeddata', tryPlay, { once: true });
-    singleVideo.load();
-    tryPlay();
-
-    heroAsset.appendChild(singleVideo);
-
-  } else {
-    // Desktop: 3 cinematic panels — all loop simultaneously
-    ['01', '02', '03'].forEach((n) => {
-      const clip = document.createElement('video');
-      clip.className = 'hero-panel-video';
-      clip.muted = true;
-      clip.defaultMuted = true;
-      clip.loop = true;           // ← loop each independently
-      clip.playsInline = true;
-      clip.preload = 'auto';
-      clip.setAttribute('muted', '');
-      clip.setAttribute('playsinline', '');
-      clip.setAttribute('webkit-playsinline', '');
-
-      const src = document.createElement('source');
-      src.src = `public/videos/pouffee-hero-panel-${n}.mp4`;
-      src.type = 'video/mp4';
-      clip.appendChild(src);
-
-      function start() {
-        clip.muted = true;
-        clip.play().catch(() => {});
-      }
-
-      // Start playing as soon as any data is available
-      clip.addEventListener('canplay', start);
-      clip.addEventListener('loadeddata', start);
-
-      clip.addEventListener('error', () => clip.classList.add('is-fallback'));
-
-      heroAsset.appendChild(clip);
-    });
-
-    // Resume panels after tab becomes visible
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
-        document.querySelectorAll('.hero-panel-video').forEach(c => c.play().catch(() => {}));
-      }
+  function startAllSimultaneously() {
+    if (started) return;
+    started = true;
+    videos.forEach((v) => {
+      try {
+        v.currentTime = 0;
+        v.muted = true;
+        const playPromise = v.play();
+        if (playPromise && playPromise.catch) {
+          playPromise.catch(() => {});
+        }
+      } catch (err) {}
+      v.style.opacity = '1';
     });
   }
+
+  panels.forEach((n) => {
+    const clip = document.createElement('video');
+    clip.className = 'hero-panel-video';
+    clip.muted = true;
+    clip.defaultMuted = true;
+    clip.loop = true;
+    clip.playsInline = true;
+    clip.preload = 'auto';
+    clip.setAttribute('muted', '');
+    clip.setAttribute('playsinline', '');
+    clip.setAttribute('webkit-playsinline', '');
+    clip.style.opacity = '0';
+    clip.style.transition = 'opacity 0.4s ease';
+
+    const src = document.createElement('source');
+    src.src = `public/videos/pouffee-hero-panel-${n}.mp4`;
+    src.type = 'video/mp4';
+    clip.appendChild(src);
+
+    let isMarkedReady = false;
+    function markReady() {
+      if (isMarkedReady) return;
+      isMarkedReady = true;
+      readyCount++;
+      if (readyCount >= panels.length) {
+        startAllSimultaneously();
+      }
+    }
+
+    clip.addEventListener('canplay', markReady, { once: true });
+    clip.addEventListener('loadeddata', markReady, { once: true });
+    clip.addEventListener('error', () => {
+      clip.classList.add('is-fallback');
+      markReady();
+    });
+
+    videos.push(clip);
+    heroAsset.appendChild(clip);
+    clip.load();
+  });
+
+  // Safety timer: start within 2s even if slow connection
+  setTimeout(startAllSimultaneously, 2000);
+
+  // Resume panels together after tab becomes visible
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      videos.forEach((c) => {
+        c.muted = true;
+        c.play().catch(() => {});
+      });
+    }
+  });
 })();
 
 /* ---- Navigation scroll + hamburger ---- */
