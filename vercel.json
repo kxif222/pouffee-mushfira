@@ -1,5 +1,16 @@
 {
+  "outputDirectory": ".",
   "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/journey",
+      "destination": "/journey.html"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
