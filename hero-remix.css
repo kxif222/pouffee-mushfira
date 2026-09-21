@@ -1,0 +1,1 @@
+.hero-asset.triptych{background:#22231f url('public/images/pouffee-final-01.jpg') center/cover no-repeat!important}.hero-panel-video{background:transparent!important}.hero-panel-video.is-fallback{opacity:0!important}.hero-asset.triptych:has(.hero-panel-video.is-fallback){background-color:#22231f}
